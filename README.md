@@ -1,22 +1,90 @@
 # Seclai MCP Server
 
 [![MCP](https://img.shields.io/badge/MCP-Compatible-blue)](https://modelcontextprotocol.io)
-[![Transport](https://img.shields.io/badge/Transport-Streamable%20HTTP-green)](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http)
+[![Transport](https://img.shields.io/badge/Transport-Streamable%20HTTP-green)](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http)
 
 Connect AI-powered coding tools to [Seclai](https://seclai.com) using the [Model Context Protocol](https://modelcontextprotocol.io). Manage your agents, knowledge bases, content sources, memory banks, evaluations, solutions, governance, alerts, models, and more directly from your editor or terminal.
 
 ## Quick Start
 
-**Endpoint:** `https://mcp.seclai.com`
+**Endpoint:** `https://mcp.seclai.com/mcp`
 **Transport:** Streamable HTTP
-**Auth:** `X-API-Key` header or `Authorization: Bearer <token>` (OAuth)
+**Auth:** browser sign-in (OAuth), or an `X-API-Key` header
 
-You need a Seclai account with API access. Authenticate with either:
+You need a Seclai account with API access.
 
-1. **API key** — create one at [seclai.com](https://seclai.com) → Account Settings → API Keys.
-2. **OAuth Bearer token** — use an OAuth2 access token from the Seclai SSO flow.
+### Sign in from your client (recommended)
+
+The server is an OAuth 2.1 authorization server with [dynamic client
+registration](https://datatracker.ietf.org/doc/html/rfc7591) and PKCE, so any
+client implementing the MCP authorization spec can register itself and open a
+browser sign-in. **No API key to create, paste, or rotate, and no secret sitting
+in a config file.**
+
+Add the URL with no `headers` block at all and the client handles the rest:
+
+```json
+{
+  "mcpServers": {
+    "seclai": {
+      "type": "streamable-http",
+      "url": "https://mcp.seclai.com/mcp"
+    }
+  }
+}
+```
+
+Claude Code, Claude Desktop, VS Code, Cursor and Codex CLI all support this
+today. If a client reports an expired or invalid token, clear its stored
+credentials for the server and reconnect — it will re-register automatically.
+
+<details>
+<summary>What the server advertises</summary>
+
+```
+GET /.well-known/oauth-protected-resource/mcp
+  resource:              https://mcp.seclai.com/mcp
+  authorization_servers: https://mcp.seclai.com/
+
+GET /.well-known/oauth-authorization-server
+  authorization_endpoint:          /authorize
+  token_endpoint:                  /token
+  registration_endpoint:           /register     (dynamic client registration)
+  grant_types_supported:           authorization_code, refresh_token
+  code_challenge_methods_supported: S256
+  scopes_supported:                openid
+```
+
+</details>
+
+### API key
+
+For clients without OAuth support, or for CI and scripted use, create a key at
+[seclai.com](https://seclai.com) → Account Settings → API Keys and send it as
+`X-API-Key`:
+
+```json
+{
+  "mcpServers": {
+    "seclai": {
+      "type": "streamable-http",
+      "url": "https://mcp.seclai.com/mcp",
+      "headers": {
+        "X-API-Key": "YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+Keys must be user-scoped; keys created recently are user-scoped automatically.
 
 To target a specific organization, include the `X-Account-Id` header.
+
+> **On the URL.** `https://mcp.seclai.com/mcp` is the canonical resource the
+> server advertises in its protected-resource metadata. The bare host also
+> routes, but prefer the `/mcp` form — OAuth clients derive the token audience
+> from the resource identifier.
 
 ### Claude Desktop
 
@@ -30,25 +98,22 @@ Add to your config file:
   "mcpServers": {
     "seclai": {
       "type": "streamable-http",
-      "url": "https://mcp.seclai.com",
-      "headers": {
-        "X-API-Key": "YOUR_API_KEY"
-      }
+      "url": "https://mcp.seclai.com/mcp"
     }
   }
 }
 ```
 
-Or with OAuth and org targeting:
+To pin the connection to one organization, add the `X-Account-Id` header — sign-in
+still happens in the browser, so this is the only header you ever need:
 
 ```json
 {
   "mcpServers": {
     "seclai": {
       "type": "streamable-http",
-      "url": "https://mcp.seclai.com",
+      "url": "https://mcp.seclai.com/mcp",
       "headers": {
-        "Authorization": "Bearer YOUR_ACCESS_TOKEN",
         "X-Account-Id": "YOUR_ACCOUNT_ID"
       }
     }
@@ -62,10 +127,12 @@ Restart Claude Desktop after saving.
 
 ```bash
 claude mcp add seclai \
-  --transport streamable-http \
-  "https://mcp.seclai.com" \
-  --header "X-API-Key: YOUR_API_KEY"
+  --transport http \
+  "https://mcp.seclai.com/mcp"
 ```
+
+Claude Code opens the browser sign-in on first use. Run `/mcp` inside Claude
+Code to check the connection or re-authenticate.
 
 Or copy [`examples/claude-code.json`](examples/claude-code.json) to `.mcp.json` in your project root.
 
@@ -73,11 +140,91 @@ Or copy [`examples/claude-code.json`](examples/claude-code.json) to `.mcp.json` 
 
 Copy [`examples/cursor.json`](examples/cursor.json) to `.cursor/mcp.json` in your project root.
 
-Or add manually: Settings → MCP → Add new MCP server → set type to `streamable-http` and URL to `https://mcp.seclai.com`.
+Or add manually: Settings → MCP → Add new MCP server → set type to `streamable-http` and URL to `https://mcp.seclai.com/mcp`.
 
 ### Windsurf
 
 Copy [`examples/windsurf.json`](examples/windsurf.json) to `~/.codeium/windsurf/mcp_config.json`.
+
+### VS Code (GitHub Copilot)
+
+Copy [`examples/vscode.json`](examples/vscode.json) to `.vscode/mcp.json` in your
+project, or run **MCP: Open User Configuration** for a user-level install. VS
+Code uses `servers` rather than `mcpServers`, and `"type": "http"`:
+
+```json
+{
+  "servers": {
+    "seclai": {
+      "type": "http",
+      "url": "https://mcp.seclai.com/mcp"
+    }
+  }
+}
+```
+
+### Kiro
+
+Copy [`examples/kiro.json`](examples/kiro.json) to `.kiro/settings/mcp.json` in
+your project, or `~/.kiro/settings/mcp.json` for all projects.
+
+### Roo Code
+
+Copy [`examples/roo.json`](examples/roo.json) to `.roo/mcp.json` in your project
+root. For a global install, use Roo's **MCP Servers → Edit Global MCP** panel.
+
+### Cline
+
+Cline stores MCP settings in `cline_mcp_settings.json` inside its VS Code
+extension storage, so edit it through the UI rather than by path: open the Cline
+panel → **MCP Servers** → **Configure MCP Servers**, then add the same
+`mcpServers` block shown above.
+
+### Gemini CLI
+
+Add to `.gemini/settings.json` in your project, or `~/.gemini/settings.json`
+globally. Gemini CLI names the field **`httpUrl`**, not `url`:
+
+```json
+{
+  "mcpServers": {
+    "seclai": {
+      "httpUrl": "https://mcp.seclai.com/mcp"
+    }
+  }
+}
+```
+
+### Codex CLI
+
+Codex uses TOML at `~/.codex/config.toml`, and can hold the OAuth credentials
+itself — see [`examples/codex.toml`](examples/codex.toml):
+
+```toml
+[mcp_servers.seclai]
+url = "https://mcp.seclai.com/mcp"
+auth = "oauth"
+```
+
+Then run `codex mcp login seclai` to complete sign-in. On older Codex builds
+that only discover stdio servers, add `experimental_use_rmcp_client = true`
+above the server block.
+
+### Antigravity
+
+Copy [`examples/antigravity.json`](examples/antigravity.json) to
+`~/.gemini/config/mcp_config.json`, or `.agents/mcp_config.json` in your
+workspace. Antigravity names the field **`serverUrl`**:
+
+```json
+{
+  "mcpServers": {
+    "seclai": {
+      "serverUrl": "https://mcp.seclai.com/mcp"
+    }
+  }
+}
+```
 
 ### Other Clients
 
@@ -85,11 +232,15 @@ Any client supporting Streamable HTTP MCP transport works. Configure:
 
 | Setting       | Value                                                   |
 | ------------- | ------------------------------------------------------- |
-| URL           | `https://mcp.seclai.com`                                |
+| URL           | `https://mcp.seclai.com/mcp`                            |
 | Transport     | Streamable HTTP                                         |
+| Auth (OAuth)  | none in config — the client registers and signs in      |
 | Auth (API key)| `X-API-Key: YOUR_API_KEY`                               |
-| Auth (OAuth)  | `Authorization: Bearer YOUR_ACCESS_TOKEN`               |
 | Org targeting | `X-Account-Id: YOUR_ACCOUNT_ID` _(optional)_            |
+
+The URL field is not spelled the same everywhere — `url` in most clients,
+`httpUrl` in Gemini CLI, `serverUrl` in Antigravity — and VS Code uses `servers`
+where everyone else uses `mcpServers`.
 
 ## Available Tools
 
@@ -105,6 +256,10 @@ Any client supporting Streamable HTTP MCP transport works. Configure:
 | `update_agent_definition`    | Update an agent's definition with optimistic locking          |
 | `delete_agent`               | Delete an agent (cannot be undone)                            |
 | `export_agent`               | Export an agent's portable JSON snapshot                       |
+| `preview_agent_import`       | Validate an `agent_definition` payload without creating anything |
+| `disable_agent`              | Pause an agent so it stops running from every trigger          |
+| `enable_agent`               | Re-enable a paused agent                                       |
+| `get_agents_calling_agent`   | List live agents that call this one via a `call_agent` step    |
 
 ### Agent Runs
 
@@ -113,6 +268,19 @@ Any client supporting Streamable HTTP MCP transport works. Configure:
 | `run_agent`                  | Start an agent run                                            |
 | `get_agent_run_status`       | Get the status and result of an agent run                     |
 | `list_agent_runs`            | List runs for an agent with optional status filter            |
+| `cancel_agent_run`           | Cancel an in-flight or queued run by run id                   |
+
+### Agent Inputs
+
+| Tool                             | Description                                               |
+| -------------------------------- | --------------------------------------------------------- |
+| `get_agent_attachment_references`| What files an agent's definition expects on a run         |
+| `upload_agent_input`             | Upload a file to use as input for a subsequent `run_agent` |
+| `get_agent_input_upload_status`  | Poll the processing status of an `upload_agent_input`     |
+
+Call `get_agent_attachment_references` before staging uploads — it reports
+whether the agent accepts files and the names or patterns a run-time batch must
+satisfy.
 
 ### Agent AI Assistant
 
@@ -177,6 +345,7 @@ Any client supporting Streamable HTTP MCP transport works. Configure:
 | `list_source_pulls`               | List pull (sync) operations for a source                     |
 | `get_source_pull_errors`          | Get errors from a source pull operation                      |
 | `generate_source_plan`            | AI-generate a source configuration plan                      |
+| `upload_source_content`           | Upload an image/audio/video/PDF/text file to a custom index  |
 
 ### Source Exports
 
@@ -267,12 +436,15 @@ Any client supporting Streamable HTTP MCP transport works. Configure:
 | `generate_governance_plan`            | AI-generate a governance plan from natural language           |
 | `accept_governance_plan`              | Accept an AI-generated governance plan                       |
 | `decline_governance_plan`             | Decline an AI-generated governance plan                      |
+| `delete_governance_policy`            | Soft-delete a governance policy                              |
+| `review_governance_coverage`          | Generate a structured policy-coverage review for a scope     |
+| `list_governance_redactor_chunks`     | Per-chunk audit records under a parent REDACT evaluation     |
 
 ### Alerts
 
 | Tool                                    | Description                                                |
 | --------------------------------------- | ---------------------------------------------------------- |
-| `list_alerts`                           | List alerts with optional status/severity filters          |
+| `list_alerts`                           | List alerts, filterable by status, agent or source connection |
 | `get_alert`                             | Get details of a specific alert                            |
 | `change_alert_status`                   | Change an alert's status (e.g. resolve)                    |
 | `add_alert_comment`                     | Add a comment to an alert                                  |
@@ -294,6 +466,8 @@ Any client supporting Streamable HTTP MCP transport works. Configure:
 | `list_model_alerts`          | List model-related alerts                                    |
 | `dismiss_model_alert`        | Dismiss a model alert                                        |
 | `dismiss_all_model_alerts`   | Dismiss all model alerts                                     |
+| `list_generation_tiers`      | Media-generation quality tiers per modality, with cost       |
+| `list_managed_providers`     | Seclai-managed OAuth providers configured on this deployment |
 
 ### Playground Experiments
 
@@ -331,11 +505,78 @@ Any client supporting Streamable HTTP MCP transport works. Configure:
 | `preview_transfer`           | Preview a resource transfer between accounts                 |
 | `execute_transfer`           | Execute a resource transfer                                  |
 
+### Agent Email — Domains
+
+| Tool                        | Description                                                    |
+| --------------------------- | -------------------------------------------------------------- |
+| `list_email_domains`        | The account's vanity and custom agent-email domains            |
+| `add_email_domain`          | Add and provision a domain; returns the DNS records to publish |
+| `verify_email_domain`       | Re-check SES and DNS verification right now                    |
+| `set_primary_email_domain`  | Make a verified domain the account's primary sending domain    |
+| `use_shared_email_domain`   | Revert to the shared `agent.seclai.com` domain                 |
+| `send_email_domain_test`    | Send a test message from a verified domain to the account owner|
+| `get_email_domain_dmarc`    | DMARC aggregate-report summary for a domain                    |
+| `remove_email_domain`       | Remove a domain and tear down its SES identity and DNS         |
+
+### Agent Email — Inbound
+
+| Tool                          | Description                                                  |
+| ----------------------------- | ------------------------------------------------------------ |
+| `set_email_trigger_config`    | Set an `EMAIL_RECEIVED` trigger's alias and sender allowlist  |
+| `list_blocked_email_senders`  | Senders blocked from triggering `EMAIL_RECEIVED` agents       |
+| `block_email_sender`          | Block a sender or domain (idempotent)                         |
+| `unblock_email_sender`        | Remove a sender from the blocklist                            |
+| `set_email_auto_block_mode`   | How governance BLOCK verdicts feed the blocklist              |
+| `list_inbound_email_rejections`| Inbound mail discarded without running an agent, and why     |
+| `get_inbound_email_status`    | Quota usage and whether the account-wide breaker has tripped  |
+| `cancel_queued_email_runs`    | Fail all over-quota parked inbound-email runs at once         |
+| `resume_inbound_email`        | Lift the account-wide inbound-email pause                     |
+| `list_agent_email_optouts`    | Recipients who opted out of this account's agent email        |
+| `remove_agent_email_optout`   | Revoke an opt-out, letting the recipient receive mail again   |
+
+### MCP Clients
+
+Seclai agents can call *other* MCP servers. These tools manage those saved
+connections — the Seclai server acting as an MCP client itself.
+
+| Tool                        | Description                                                    |
+| --------------------------- | -------------------------------------------------------------- |
+| `list_mcp_catalog`          | Browse popular external MCP servers you can add                |
+| `list_mcp_clients`          | The account's saved external-MCP configurations                |
+| `get_mcp_client`            | Get a single MCP client by id                                  |
+| `create_mcp_client`         | Save a configuration for an external MCP server                |
+| `update_mcp_client`         | Update an existing MCP client                                  |
+| `delete_mcp_client`         | Soft-delete an MCP client                                      |
+| `test_mcp_client_connection`| Connect and list the external server's tools                   |
+| `refresh_mcp_client_tools`  | Re-list and persist the external server's tool catalog         |
+| `describe_mcp_client_tools` | The cached tool catalog for one client, in compact form        |
+| `disconnect_mcp_client`     | Revoke a connected OAuth client's stored tokens, keeping it    |
+| `list_mcp_client_calls`     | Tool calls your agents made to this client during runs         |
+| `get_agents_using_mcp_client`| Agents whose workflow references this MCP client               |
+
+### Human-in-the-Loop
+
+| Tool                        | Description                                                    |
+| --------------------------- | -------------------------------------------------------------- |
+| `list_pending_hitl_requests`| HITL requests in the account, paginated                        |
+| `get_hitl_request`          | One request with its status, recipients and votes              |
+| `vote_on_hitl_request`      | Submit the calling user's vote on a pending request            |
+| `cancel_hitl_request`       | Cancel a pending request                                       |
+
+### Cloud Drives
+
+| Tool                          | Description                                                  |
+| ----------------------------- | ------------------------------------------------------------ |
+| `list_drive_providers`        | Providers whose OAuth app is configured on this deployment   |
+| `list_cloud_drives`           | The account's cloud-drive connections                        |
+| `get_agents_using_cloud_drive`| Agents whose workflow references this connection             |
+
 ### Search
 
 | Tool                         | Description                                                  |
 | ---------------------------- | ------------------------------------------------------------ |
 | `search`                     | Search across all resource types in the account              |
+| `search_docs`                | Search the Seclai product documentation by content           |
 
 ### Resources
 
@@ -391,11 +632,9 @@ Exceeded calls return a `retry_after` value. Most AI assistants handle this auto
 
 | Error | Fix |
 | ----- | --- |
-| Invalid API key | Verify key, check account standing, confirm API access on plan |
-| MCP requires a user-scoped API key | Re-create your key — new keys are user-scoped automatically |
 | Rate limit exceeded | Wait the indicated seconds, or upgrade your plan |
 | Tools not appearing | Restart client, verify URL and `streamable-http` transport |
-| Missing X-API-Key header | Check header config in your MCP client settings |
+| `invalid_token` | For OAuth clients, clear stored credentials for the server and reconnect. For API keys, confirm the key is current and user-scoped |
 | Conflict on definition update | Retry — your assistant will re-read and re-apply |
 
 ## Links

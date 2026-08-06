@@ -2,10 +2,7 @@
   "mcpServers": {
     "seclai": {
       "type": "streamable-http",
-      "url": "https://mcp.seclai.com",
-      "headers": {
-        "X-API-Key": "YOUR_API_KEY"
-      }
+      "url": "https://mcp.seclai.com/mcp"
     }
   }
 }
