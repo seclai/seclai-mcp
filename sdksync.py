@@ -1183,9 +1183,6 @@ def _ts_widened_to_undefined(old: str, new: str) -> bool:
     mo, mn = _TS_MEMBER_RE.match(old), _TS_MEMBER_RE.match(new)
     if not mo or not mn or mo.group(1) != mn.group(1) or not (mo.group(2) and mn.group(2)):
         return False
-    # In `() => T | undefined` the union is the function's return type, not the member's.
-    if "=>" in mo.group(3) or "=>" in mn.group(3):
-        return False
     old_u = _ts_union(mo.group(3))
     return "undefined" not in old_u and _ts_union(mn.group(3)) == sorted(old_u + ["undefined"])
 
@@ -1194,7 +1191,7 @@ def _ts_options_change(o: str, n: str) -> set[str] | None:
     """Kinds of compatible change between two inline options-object parameters,
     or None when the change is not provably compatible. Same name, optionality
     and default; every old member unchanged, in any order ("same"), or only
-    widened to accept `undefined`; every added member optional, to a non-empty object."""
+    widened to accept `undefined`; every added member optional, and none added to an empty `{}`."""
     po, pn = _ts_inline_object(o), _ts_inline_object(n)
     if po is None or pn is None or po[0] != pn[0] or po[2] != pn[2]:
         return None
@@ -1261,7 +1258,7 @@ _TS_COMPATIBLE_LABELS = {
     "omit": ("parameter type wrapped in Omit<…> — usually source compatible: every old value "
              "still fits, but an object literal that sets an omitted key no longer compiles"),
     "partial": "parameter type wrapped in Partial<…> — source compatible: every old value still fits",
-    "same": "options object members reordered — no change",
+    "same": "options object unchanged apart from member order or separators",
 }
 
 
@@ -1282,6 +1279,8 @@ def _ts_compatible_change(old: list[str], new: list[str]) -> str | None:
                 return None
             k = {w}
         kinds |= k
+    if len(kinds) > 1:
+        kinds.discard("same")
     return "; ".join(_TS_COMPATIBLE_LABELS[k] for k in _TS_COMPATIBLE_LABELS if k in kinds)
 
 
