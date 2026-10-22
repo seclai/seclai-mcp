@@ -7,6 +7,7 @@ This repo contains documentation and client configuration examples for the hoste
 ## Key Rules
 
 - Configuration examples live in `examples/`, one per client.
+- `.claude/skills/**` is vendored from `seclai/sdk-tools` via `git subtree`. Do not edit or review it here; changes belong in sdk-tools.
 - Transport is Streamable HTTP, not stdio.
 - Example configs use browser sign-in (OAuth) and carry no auth header. Claude (claude.ai and Desktop) has no config file for remote servers, so it has no example.
 - When the API adds new MCP tools, update the README tool inventory accordingly.
