@@ -21,7 +21,9 @@ client implementing the MCP authorization spec can register itself and open a
 browser sign-in. **No API key to create, paste, or rotate, and no secret sitting
 in a config file.**
 
-Add the URL with no `headers` block at all and the client handles the rest:
+Add the URL with no `headers` block at all and the client handles the rest.
+Most clients take this shape; each client's section below gives its exact
+format:
 
 ```json
 {
@@ -34,7 +36,7 @@ Add the URL with no `headers` block at all and the client handles the rest:
 }
 ```
 
-Claude Code, VS Code, Cursor and Codex CLI all support this today. Claude
+Claude Code, VS Code, Cursor and Codex CLI all support browser sign-in today. Claude
 (claude.ai and Desktop) adds the URL as a custom connector instead; see
 [below](#claude-claudeai-and-desktop). If a client reports an expired or invalid token, clear its stored
 credentials for the server and reconnect — it will re-register automatically.
@@ -62,21 +64,17 @@ GET /.well-known/oauth-authorization-server
 
 For clients without OAuth support, or for CI and scripted use, create a key at
 [seclai.com](https://seclai.com) → Account Settings → API Keys and send it as
-`X-API-Key`:
+`X-API-Key`. Take your client's entry from its section below and add a
+`headers` object to it:
 
 ```json
-{
-  "mcpServers": {
-    "seclai": {
-      "type": "streamable-http",
-      "url": "https://mcp.seclai.com/mcp",
-      "headers": {
-        "X-API-Key": "YOUR_API_KEY"
-      }
-    }
-  }
+"headers": {
+  "X-API-Key": "YOUR_API_KEY"
 }
 ```
+
+Codex takes `http_headers = { "X-API-Key" = "YOUR_API_KEY" }` in its TOML
+entry, and Claude Code's CLI takes `--header "X-API-Key: YOUR_API_KEY"`.
 
 Keys must be user-scoped; keys created recently are user-scoped automatically.
 
@@ -156,8 +154,7 @@ Cline stores MCP settings in `cline_mcp_settings.json` inside its VS Code
 extension storage, so edit it through the UI rather than by path: open the Cline
 panel → **MCP Servers** → **Configure MCP Servers**, then add the block below
 (also in [`examples/cline.json`](examples/cline.json)). Cline names this
-transport **`streamableHttp`**; without a `type` it falls back to SSE. To use an
-API key, add the `headers` block from [API key](#api-key) but keep this `type`:
+transport **`streamableHttp`**; without a `type` it falls back to SSE:
 
 ```json
 {
@@ -173,7 +170,8 @@ API key, add the `headers` block from [API key](#api-key) but keep this `type`:
 ### Gemini CLI
 
 Add to `.gemini/settings.json` in your project, or `~/.gemini/settings.json`
-globally. Gemini CLI names the field **`httpUrl`**, not `url`:
+globally (also in [`examples/gemini-cli.json`](examples/gemini-cli.json)).
+Gemini CLI names the field **`httpUrl`**, not `url`:
 
 ```json
 {
@@ -633,7 +631,7 @@ Exceeded calls return a `retry_after` value. Most AI assistants handle this auto
 | Error | Fix |
 | ----- | --- |
 | Rate limit exceeded | Wait the indicated seconds, or upgrade your plan |
-| Tools not appearing | Restart client, verify the URL and that the transport is Streamable HTTP, spelled as your client's section shows |
+| Tools not appearing | Restart client, and compare its entry with your client's section above |
 | `invalid_token` | For OAuth clients, clear stored credentials for the server and reconnect. For API keys, confirm the key is current and user-scoped |
 | Conflict on definition update | Retry — your assistant will re-read and re-apply |
 
