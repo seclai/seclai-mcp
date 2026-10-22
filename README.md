@@ -154,9 +154,10 @@ root. For a global install, use Roo's **MCP Servers → Edit Global MCP** panel.
 
 Cline stores MCP settings in `cline_mcp_settings.json` inside its VS Code
 extension storage, so edit it through the UI rather than by path: open the Cline
-panel → **MCP Servers** → **Configure MCP Servers**, then add the block below.
-Cline names this transport **`streamableHttp`**; without a `type` it falls back
-to SSE:
+panel → **MCP Servers** → **Configure MCP Servers**, then add the block below
+(also in [`examples/cline.json`](examples/cline.json)). Cline names this
+transport **`streamableHttp`**; without a `type` it falls back to SSE. To use an
+API key, add the `headers` block from [API key](#api-key) but keep this `type`:
 
 ```json
 {
@@ -632,7 +633,7 @@ Exceeded calls return a `retry_after` value. Most AI assistants handle this auto
 | Error | Fix |
 | ----- | --- |
 | Rate limit exceeded | Wait the indicated seconds, or upgrade your plan |
-| Tools not appearing | Restart client, verify URL and `streamable-http` transport |
+| Tools not appearing | Restart client, verify the URL and that the transport is Streamable HTTP, spelled as your client's section shows |
 | `invalid_token` | For OAuth clients, clear stored credentials for the server and reconnect. For API keys, confirm the key is current and user-scoped |
 | Conflict on definition update | Retry — your assistant will re-read and re-apply |
 
