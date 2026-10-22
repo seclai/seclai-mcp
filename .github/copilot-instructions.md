@@ -2,13 +2,13 @@
 
 ## Overview
 
-This repo contains documentation and client configuration examples for the hosted Seclai MCP server at `https://api.seclai.com/mcp`. It does not contain server source code — the MCP server runs as part of the main Seclai API.
+This repo contains documentation and client configuration examples for the hosted Seclai MCP server at `https://mcp.seclai.com/mcp`. It does not contain server source code — the MCP server runs as part of the main Seclai API.
 
 ## Key Rules
 
-- Configuration examples live in `examples/` (Claude Desktop, Cursor, Windsurf, Claude Code).
+- Configuration examples live in `examples/`, one per client.
 - Transport is Streamable HTTP, not stdio.
-- Auth uses `X-API-Key` header in all example configs.
+- Example configs use browser sign-in (OAuth) and carry no auth header. Claude (claude.ai and Desktop) has no config file for remote servers, so it has no example.
 - When the API adds new MCP tools, update the README tool inventory accordingly.
 - `.github/copilot-instructions.md` shares common sections (git rules, editing rules, self-correction rules) across all SDK repos. When updating shared rules, apply the same change to all repos: `seclai-python`, `seclai-javascript`, `seclai-go`, `seclai-csharp`, `seclai-cli`, `seclai-mcp`.
 

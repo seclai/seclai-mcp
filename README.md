@@ -34,8 +34,9 @@ Add the URL with no `headers` block at all and the client handles the rest:
 }
 ```
 
-Claude Code, Claude Desktop, VS Code, Cursor and Codex CLI all support this
-today. If a client reports an expired or invalid token, clear its stored
+Claude Code, VS Code, Cursor and Codex CLI all support this today. Claude
+(claude.ai and Desktop) adds the URL as a custom connector instead; see
+[below](#claude-claudeai-and-desktop). If a client reports an expired or invalid token, clear its stored
 credentials for the server and reconnect — it will re-register automatically.
 
 <details>
@@ -86,42 +87,18 @@ To target a specific organization, include the `X-Account-Id` header.
 > routes, but prefer the `/mcp` form — OAuth clients derive the token audience
 > from the resource identifier.
 
-### Claude Desktop
+### Claude (claude.ai and Desktop)
 
-Add to your config file:
+Add Seclai to Claude as a custom connector:
 
-- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+1. Go to **Customize → Connectors** and click **Add custom connector**
+2. Enter the URL `https://mcp.seclai.com/mcp` and click **Add**
+3. Click **Connect** and sign in with your Seclai account
 
-```json
-{
-  "mcpServers": {
-    "seclai": {
-      "type": "streamable-http",
-      "url": "https://mcp.seclai.com/mcp"
-    }
-  }
-}
-```
-
-To pin the connection to one organization, add the `X-Account-Id` header — sign-in
-still happens in the browser, so this is the only header you ever need:
-
-```json
-{
-  "mcpServers": {
-    "seclai": {
-      "type": "streamable-http",
-      "url": "https://mcp.seclai.com/mcp",
-      "headers": {
-        "X-Account-Id": "YOUR_ACCOUNT_ID"
-      }
-    }
-  }
-}
-```
-
-Restart Claude Desktop after saving.
+On Team and Enterprise plans, an organization Owner adds the connector under
+**Organization settings → Connectors** (**Add → Custom**), and each member then
+clicks **Connect** under **Customize → Connectors** to sign in with their own
+Seclai account.
 
 ### Claude Code (CLI)
 
@@ -277,6 +254,7 @@ where everyone else uses `mcpServers`.
 | `get_agent_attachment_references`| What files an agent's definition expects on a run         |
 | `upload_agent_input`             | Upload a file to use as input for a subsequent `run_agent` |
 | `get_agent_input_upload_status`  | Poll the processing status of an `upload_agent_input`     |
+| `set_trigger_accepted_attachments`| Replace the files a trigger accepts (names, types, counts) |
 
 Call `get_agent_attachment_references` before staging uploads — it reports
 whether the agent accepts files and the names or patterns a run-time batch must
@@ -301,14 +279,13 @@ satisfy.
 | `update_evaluation_criteria`      | Update an existing evaluation criteria                       |
 | `delete_evaluation_criteria`      | Delete an evaluation criteria                                |
 | `get_evaluation_summary`          | Get summary statistics for an evaluation criteria            |
-| `get_non_manual_evaluation_summary` | Get summary of non-manual evaluations for an agent         |
+| `get_non_manual_evaluation_summary` | Account-wide summary of non-manual evaluations for a date range |
 | `list_evaluation_results`         | List results for an evaluation criteria                      |
 | `list_agent_evaluation_results`   | List all evaluation results for an agent                     |
 | `list_run_evaluation_results`     | List evaluation results for a specific run                   |
 | `create_evaluation_result`        | Create a manual evaluation result                            |
 | `run_evaluation`                  | Run automated evaluation on a criteria                       |
 | `test_draft_evaluation`           | Test an evaluation criteria without persisting               |
-| `opt_evaluation_into_review`      | Move an evaluation result into the review queue              |
 
 ### Knowledge Bases
 
@@ -346,6 +323,11 @@ satisfy.
 | `get_source_pull_errors`          | Get errors from a source pull operation                      |
 | `generate_source_plan`            | AI-generate a source configuration plan                      |
 | `upload_source_content`           | Upload an image/audio/video/PDF/text file to a custom index  |
+| `list_source_content_status`      | Indexing status of every item a source tried to index, including failures |
+| `list_content_attachments`        | Files attached to a content item (email attachments, feed files, page media) |
+| `get_content_attachment`          | One attached file: indexing status, metadata and indexed text |
+| `list_content_attachment_embeddings` | The chunks an attached file is indexed by                 |
+| `list_email_source_rejections`    | Mail an email content source refused, and why                |
 
 ### Source Exports
 
@@ -356,7 +338,7 @@ satisfy.
 | `create_source_export`       | Create a new source export                                   |
 | `cancel_source_export`       | Cancel a running source export                               |
 | `download_source_export`     | Download a completed source export                           |
-| `estimate_source_export`     | Estimate the size/cost of a source export                    |
+| `estimate_source_export`     | Estimate the size in bytes of a source export                |
 
 ### Source Embedding Migrations
 
@@ -387,8 +369,8 @@ satisfy.
 | Tool                              | Description                                                  |
 | --------------------------------- | ------------------------------------------------------------ |
 | `generate_memory_bank_config`     | AI-generate a memory bank configuration                      |
-| `get_memory_bank_ai_conversation` | Get the last AI conversation for a memory bank               |
-| `accept_memory_bank_suggestion`   | Accept an AI-generated memory bank suggestion                |
+| `get_memory_bank_ai_conversation` | Your recent memory-bank AI assistant turns, across all banks |
+| `accept_memory_bank_suggestion`   | Mark a memory-bank AI suggestion accepted or declined (applies nothing) |
 
 ### Solutions
 
@@ -425,6 +407,7 @@ satisfy.
 | `bulk_resolve_governance_evaluations` | Resolve multiple evaluations at once                         |
 | `test_draft_governance_policy`        | Test a policy draft without persisting                       |
 | `test_governance_policy`              | Test a policy and persist the result                         |
+| `opt_evaluation_into_review`          | Move a policy-test evaluation into the review queue          |
 | `set_policy_knowledge_bases`          | Link knowledge bases to a policy for RAG evidence            |
 | `list_policy_knowledge_bases`         | List knowledge bases linked to a policy                      |
 | `get_circular_knowledge_bases`        | Check for circular KB references before linking              |
@@ -462,6 +445,8 @@ satisfy.
 | ---------------------------- | ------------------------------------------------------------ |
 | `list_models`                | List models grouped by provider with optional filters        |
 | `get_model`                  | Get full details for a specific model                        |
+| `list_embedding_models`      | Embedding models a content source can be created with        |
+| `list_reranker_models`       | Reranker models a knowledge base can use                     |
 | `get_model_recommendations`  | Get recommendations for a model                              |
 | `list_model_alerts`          | List model-related alerts                                    |
 | `dismiss_model_alert`        | Dismiss a model alert                                        |
@@ -486,6 +471,8 @@ satisfy.
 | `get_account_llm_calls_summary`   | Get LLM call summary for the account                        |
 | `list_organizations`              | List organizations the user belongs to                       |
 | `switch_organization`             | Switch to a different organization                           |
+| `get_retention_settings`          | How long the account keeps agent traces and governance evaluations |
+| `set_retention_settings`          | Change the agent-trace retention window (schedules permanent deletion) |
 
 ### Resource Exports
 
@@ -528,7 +515,7 @@ satisfy.
 | `unblock_email_sender`        | Remove a sender from the blocklist                            |
 | `set_email_auto_block_mode`   | How governance BLOCK verdicts feed the blocklist              |
 | `list_inbound_email_rejections`| Inbound mail discarded without running an agent, and why     |
-| `get_inbound_email_status`    | Quota usage and whether the account-wide breaker has tripped  |
+| `get_inbound_email_status`    | Whether inbound mail is paused, and the queued-run backlog    |
 | `cancel_queued_email_runs`    | Fail all over-quota parked inbound-email runs at once         |
 | `resume_inbound_email`        | Lift the account-wide inbound-email pause                     |
 | `list_agent_email_optouts`    | Recipients who opted out of this account's agent email        |
@@ -570,6 +557,7 @@ connections — the Seclai server acting as an MCP client itself.
 | `list_drive_providers`        | Providers whose OAuth app is configured on this deployment   |
 | `list_cloud_drives`           | The account's cloud-drive connections                        |
 | `get_agents_using_cloud_drive`| Agents whose workflow references this connection             |
+| `list_cloud_drive_rejections` | Files a cloud-drive connection skipped, and why              |
 
 ### Search
 
@@ -608,23 +596,22 @@ When creating agents, specify a template for a pre-configured starting point:
 | `blank`                    | Empty agent with no steps                  |
 | `retrieval_example`        | Demonstrates knowledge base retrieval      |
 | `simple_qa`               | Basic question-answering agent             |
-| `summarizer`              | Summarizes content from sources            |
+| `summarizer`              | Summarizes the input text                  |
 | `json_extractor`          | Extracts structured data from content      |
 | `content_change_notifier` | Monitors sources for changes and notifies  |
 | `scheduled_report`        | Generates reports on a schedule            |
-| `webhook_pipeline`        | Processes incoming webhook data            |
+| `webhook_pipeline`        | Processes input and posts it to a webhook  |
 
 ## Rate Limits
 
 MCP calls are rate-limited per account based on your plan:
 
-| Plan       | Calls / Minute |
-| ---------- | -------------- |
-| Free       | No MCP access  |
-| Starter    | 0              |
-| Pro        | 30             |
-| Team       | 75             |
-| Enterprise | 300            |
+| Plan     | Calls / Minute |
+| -------- | -------------- |
+| Personal | 25             |
+| Starter  | 30             |
+| Team     | 100            |
+| Pro      | 600            |
 
 Exceeded calls return a `retry_after` value. Most AI assistants handle this automatically.
 
