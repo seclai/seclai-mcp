@@ -144,7 +144,8 @@ diff called 21 JavaScript changes breaking when none were:
   (source compatible; flagged as binary breaking for C#), `unknown` narrowed to a
   concrete type in TypeScript (safe), an optional member added to an inline
   TypeScript options object such as `opts: { signal?: AbortSignal } = {}` (every
-  other member, the parameter's name and its default unchanged; usually source
+  other member unchanged or only widened to accept `undefined`, the parameter's
+  name and its default unchanged; usually source
   compatible, but a caller passing a non-literal object that already carries a
   same-named property of another type — `const o = { signal: "abc" }` — no
   longer compiles, since excess-property checks only cover literals), an
