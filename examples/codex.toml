@@ -1,0 +1,8 @@
+# ~/.codex/config.toml
+#
+# Codex performs the OAuth flow itself. After adding this block, run:
+#   codex mcp login seclai
+
+[mcp_servers.seclai]
+url = "https://mcp.seclai.com/mcp"
+auth = "oauth"
