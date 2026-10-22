@@ -154,8 +154,20 @@ root. For a global install, use Roo's **MCP Servers → Edit Global MCP** panel.
 
 Cline stores MCP settings in `cline_mcp_settings.json` inside its VS Code
 extension storage, so edit it through the UI rather than by path: open the Cline
-panel → **MCP Servers** → **Configure MCP Servers**, then add the same
-`mcpServers` block shown above.
+panel → **MCP Servers** → **Configure MCP Servers**, then add the block below.
+Cline names this transport **`streamableHttp`**; without a `type` it falls back
+to SSE:
+
+```json
+{
+  "mcpServers": {
+    "seclai": {
+      "type": "streamableHttp",
+      "url": "https://mcp.seclai.com/mcp"
+    }
+  }
+}
+```
 
 ### Gemini CLI
 
