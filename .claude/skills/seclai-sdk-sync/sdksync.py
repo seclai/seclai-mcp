@@ -55,7 +55,8 @@ PATH_LITERAL_RE = r"""(?:"(/[^"\n]*)"|`(/[^`\n]*)`|'(/[^'\n]*)')"""
 #                 surface and be reported REMOVED.
 #   sig_tail_re — matched straight after the closing `)` (the return type).
 #   sig_groups  — head groups, then "params", then tail groups.
-#   line_comment — stripped from parameter lists with `/* */`; default `//`.
+#   line_comment — the line-comment marker; `public_surface` strips these, and
+#                 `/* */` too when it is `//`, from the whole file. Default `//`.
 # Endpoint helpers, used by `params` and `returns` (see `request_blocks`):
 #   helper_re   — a NON-public method declaration on the client, name captured.
 #   helper_call — how the client calls one of its own methods; `{name}` is filled
@@ -1182,6 +1183,9 @@ def _ts_widened_to_undefined(old: str, new: str) -> bool:
     mo, mn = _TS_MEMBER_RE.match(old), _TS_MEMBER_RE.match(new)
     if not mo or not mn or mo.group(1) != mn.group(1) or not (mo.group(2) and mn.group(2)):
         return False
+    # In `() => T | undefined` the union is the function's return type, not the member's.
+    if "=>" in mo.group(3) or "=>" in mn.group(3):
+        return False
     old_u = _ts_union(mo.group(3))
     return "undefined" not in old_u and _ts_union(mn.group(3)) == sorted(old_u + ["undefined"])
 
@@ -1189,13 +1193,16 @@ def _ts_widened_to_undefined(old: str, new: str) -> bool:
 def _ts_options_change(o: str, n: str) -> set[str] | None:
     """Kinds of compatible change between two inline options-object parameters,
     or None when the change is not provably compatible. Same name, optionality
-    and default; every old member unchanged or only widened to accept
-    `undefined` ("undefined"); every added member optional ("props")."""
+    and default; every old member unchanged, in any order ("same"), or only
+    widened to accept `undefined`; every added member optional, to a non-empty object."""
     po, pn = _ts_inline_object(o), _ts_inline_object(n)
     if po is None or pn is None or po[0] != pn[0] or po[2] != pn[2]:
         return None
     mo, mn = _ts_object_members(po[1]), _ts_object_members(pn[1])
     if mo is None or mn is None:
+        return None
+    # `{}` accepts any non-null value; a weak type such as `{ a?: T }` does not (TS2559).
+    if not mo and mn:
         return None
     kinds: set[str] = set()
     for k, (opt, text) in mo.items():
@@ -1211,7 +1218,7 @@ def _ts_options_change(o: str, n: str) -> set[str] | None:
         return None
     if added:
         kinds.add("props")
-    return kinds or None
+    return kinds or {"same"}
 
 
 def _ts_wrapped_type(o: str, n: str) -> str | None:
@@ -1254,6 +1261,7 @@ _TS_COMPATIBLE_LABELS = {
     "omit": ("parameter type wrapped in Omit<…> — usually source compatible: every old value "
              "still fits, but an object literal that sets an omitted key no longer compiles"),
     "partial": "parameter type wrapped in Partial<…> — source compatible: every old value still fits",
+    "same": "options object members reordered — no change",
 }
 
 
