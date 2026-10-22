@@ -1,8 +1,0 @@
-{
-  "servers": {
-    "seclai": {
-      "type": "http",
-      "url": "https://mcp.seclai.com/mcp"
-    }
-  }
-}

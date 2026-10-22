@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "seclai": {
-      "type": "streamable-http",
-      "url": "https://mcp.seclai.com/mcp"
-    }
-  }
-}
